@@ -37,10 +37,34 @@ npm run desktop:dist        # → release/pi-desktop-<版本>-setup.exe，约 14
 
 ## 跟上游
 
+**基线锚点**：`upstream-sync` 支指向「上次同步到的上游提交」；`main` 是 fork 支（上游 + 我们的改动）。
+`upstream-sync..upstream/main` 就是上游新增、还没进本 fork 的东西 —— 挑之前先看它。
+
 ```bash
 git fetch upstream
-git merge upstream/main      # 三方合并；品牌那几行是唯一可能冲突的地方
+git log --oneline upstream-sync..upstream/main      # 上游新增了什么
 ```
+
+同步三选一：
+
+```bash
+git cherry-pick <sha>                          # 挑单个修复
+git cherry-pick <a>^..<b>                      # 挑一批
+git merge --no-commit --no-ff upstream/main    # 先试合，不满意就 git merge --abort
+git merge upstream/main                        # 全量跟
+```
+
+同步完推进基线：
+
+```bash
+git branch -f upstream-sync upstream/main      # 全量跟之后
+git branch -f upstream-sync <挑到的上游提交>    # 只挑了一部分：推到你看过的那条
+```
+
+> 只挑了一部分却把基线推到 `upstream/main`，没挑的提交就会从候选清单里消失。
+
+冲突只会出在上游也在天天改的那 14 个文件：`locales/*.json` ×11、`web/src/i18n.tsx`、`web/index.html`、`package.json`。
+`rerere` 已开，重复的品牌冲突会自动复用解法。
 
 上游 3.18 版/天，不必跟 —— pin 在某一版，想升再升。
 
