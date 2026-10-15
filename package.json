@@ -41,10 +41,6 @@
 		"terminal",
 		"llm"
 	],
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/xing-shuyin/pi-web-ui.git"
-	},
 	"pi": {
 		"extensions": [
 			"./extensions"

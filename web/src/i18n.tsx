@@ -17,7 +17,7 @@ const STORAGE_KEY = "pi-web-ui:lang";
 
 export const zh = {
 	/* common */
-	docTitle: "pi-web-ui — pi 编码智能体",
+	docTitle: "pi 桌面版",
 	cancel: "取消",
 	ok: "确定",
 	save: "保存",

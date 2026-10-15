@@ -1,6 +1,6 @@
 # electron-builder 配置（桌面版专用，网页版/npm 包不受影响）
-appId: com.xingshuyin.pi-web-ui-desktop
-productName: pi-web-ui-desktop
+appId: com.sfwgo.pi-desktop
+productName: pi-desktop
 directories:
   output: release
 files:
@@ -16,6 +16,8 @@ files:
 # 桌面壳主进程入口必须是 dist/desktop/main.js，故通过 extraMetadata 覆写 main。
 extraMetadata:
   main: dist/desktop/main.js
+  # 让 Electron 的 userData 落到 %APPDATA%\pi-desktop，不与上游桌面版共用 pi-web-ui
+  name: pi-desktop
 # asar:false：server 以 ELECTRON_RUN_AS_NODE 跑在纯 Node 语义下，
 # 且 node-pty 的 .node 原生模块本来就进不了 asar，直接关闭最省心。
 asar: false
@@ -25,14 +27,9 @@ asar: false
 npmRebuild: false
 # 图标：直接复用网页版的 PWA 图标（1024×1024 PNG，electron-builder 自己转 .ico/.icns）。
 # 不放进 files：图标是打包时烘进 exe/App 里的，运行时不需要这个文件。
-# 更新 feed（issue #180）：显式声明 github publish，`app-update.yml` 不再是
-# GH_TOKEN 下的意外产物 —— electron-updater 靠它定位 releases 里的
-# latest*.yml。CI 保持 `--publish never`（产物由 gh release upload 手动挂载，
-# 避免 electron-builder 直推与 release-notes.yml 打架），feed 文件照常生成。
-publish:
-  provider: github
-  owner: xing-shuyin
-  repo: pi-web-ui
+# 更新 feed：本构建**不接**上游 feed —— 否则 electron-updater 会把应用原地升回
+# 官方 pi-web-ui，品牌被覆盖。不声明 publish 就不生成 app-update.yml，自动更新停用；
+# 升级 = 拉源码 + 重打。
 win:
   target:
     - nsis

@@ -356,7 +356,7 @@ export function App() {
 	const projectTitle = useProjectTitle();
 	useEffect(() => {
 		const name = projectTitle ? projectNameFromCwd(cwd) : "";
-		document.title = name ? `${name} — pi-web-ui` : t("docTitle");
+		document.title = name ? `${name} — pi 桌面版` : t("docTitle");
 	}, [cwd, projectTitle, t]);
 	const [attachments, setAttachments] = useState<PendingAttachment[]>([]);
 	// 宿主注入的待发附件（浏览器元素拾取扩展的截图 → window.__piWebUiHost.compose）：

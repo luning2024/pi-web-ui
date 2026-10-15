@@ -3,7 +3,7 @@
 	"nativeName": "Français",
 	"version": "0.68.1",
 	"strings": {
-		"docTitle": "pi-web-ui — agent de programmation pi",
+		"docTitle": "pi 桌面版",
 		"cancel": "Annuler",
 		"ok": "OK",
 		"save": "Enregistrer",

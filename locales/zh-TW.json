@@ -3,7 +3,7 @@
 	"nativeName": "繁體中文（台灣）",
 	"version": "0.105.1",
 	"strings": {
-		"docTitle": "pi-web-ui — pi 程式設計代理",
+		"docTitle": "pi 桌面版",
 		"cancel": "取消",
 		"ok": "確定",
 		"save": "儲存",

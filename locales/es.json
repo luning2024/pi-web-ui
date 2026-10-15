@@ -3,7 +3,7 @@
 	"nativeName": "Español",
 	"version": "0.68.1",
 	"strings": {
-		"docTitle": "pi-web-ui — agente de codificación pi",
+		"docTitle": "pi 桌面版",
 		"cancel": "Cancelar",
 		"ok": "Aceptar",
 		"save": "Guardar",

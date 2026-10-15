@@ -3,7 +3,7 @@
 	"nativeName": "Русский",
 	"version": "0.68.1",
 	"strings": {
-		"docTitle": "pi-web-ui — pi-агент для программирования",
+		"docTitle": "pi 桌面版",
 		"cancel": "Отмена",
 		"ok": "ОК",
 		"save": "Сохранить",

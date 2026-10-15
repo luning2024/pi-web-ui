@@ -965,7 +965,7 @@ export function TopBar({
 		"host:brand": (
 			<span className="brand">
 				<span className="brand-logo">π</span>
-				<span className="brand-name">pi-web-ui</span>
+				<span className="brand-name">pi 桌面版</span>
 			</span>
 		),
 		// 打开项目：切整个工作区（set_cwd），与视图无关 —— 终端 / Git / 插件视图里同样常驻可点。

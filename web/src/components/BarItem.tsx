@@ -311,7 +311,7 @@ export function BarItem({
 				data-bar-item={id}
 			>
 				<span className="brand-logo bar-item-brand-logo">π</span>
-				<span className="brand-name bar-item-text">{named("pi-web-ui")}</span>
+				<span className="brand-name bar-item-text">{named("pi 桌面版")}</span>
 			</span>
 		);
 	}

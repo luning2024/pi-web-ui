@@ -3,7 +3,7 @@
 	"nativeName": "日本語",
 	"version": "0.69.0",
 	"strings": {
-		"docTitle": "pi-web-ui — pi コーディングエージェント",
+		"docTitle": "pi 桌面版",
 		"cancel": "キャンセル",
 		"ok": "OK",
 		"save": "保存",

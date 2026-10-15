@@ -3,7 +3,7 @@
 	"nativeName": "Italiano",
 	"version": "0.68.1",
 	"strings": {
-		"docTitle": "pi-web-ui — agente di coding pi",
+		"docTitle": "pi 桌面版",
 		"cancel": "Annulla",
 		"ok": "OK",
 		"save": "Salva",

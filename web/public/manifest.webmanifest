@@ -1,7 +1,7 @@
 {
-	"name": "pi-web-ui — pi coding agent",
-	"short_name": "pi-web-ui",
-	"description": "The polished browser cockpit for the pi coding agent. Stream conversations, inspect tool calls, manage files and run your workspace.",
+	"name": "pi 桌面版 — pi coding agent",
+	"short_name": "pi-desktop",
+	"description": "pi 桌面版：pi 内核 + pi-web-ui 界面 + Electron 壳，零改上游。",
 	"start_url": "./",
 	"scope": "./",
 	"display": "standalone",
