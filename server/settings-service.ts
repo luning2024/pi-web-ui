@@ -402,6 +402,7 @@ export class SettingsService {
 				keepRecentMessages: normalizeKeepRecentMessages(this.settings.keepRecentMessages),
 				showForkedParentSessions: this.settings.showForkedParentSessions ?? false,
 				retainFinishedConversations: this.settings.retainFinishedConversations ?? false,
+				openRecentSessionOnProjectSwitch: this.settings.openRecentSessionOnProjectSwitch ?? true,
 				visionBridgeEnabled: this.settings.visionBridgeEnabled,
 				visionBridgeModel: this.settings.visionBridgeModel,
 				visionBridgePromptMode: this.settings.visionBridgePromptMode,
@@ -447,6 +448,7 @@ export class SettingsService {
 				subagentModels: this.collectSubagentModels(),
 				quickPhrases: [...this.settings.quickPhrases],
 				quickPhrasesEnabled: this.settings.quickPhrasesEnabled,
+				minimalNewChat: this.settings.minimalNewChat,
 				quickPhrasesSeeded: this.host.stateStore.getQuickPhrasesSeeded(),
 				mcpServers: mcp.servers,
 				mcpGlobalConfigPath: mcp.globalPath,
@@ -541,6 +543,7 @@ export class SettingsService {
 		/** 历史对话列表中是否显示已被 fork 派生的父会话（默认 false = 仅显示链尾最新分支）。 */
 		showForkedParentSessions?: boolean;
 		retainFinishedConversations?: boolean;
+		openRecentSessionOnProjectSwitch?: boolean;
 		devNoCache?: boolean;
 		autoReload?: boolean;
 		skillsFullText?: string[];
@@ -565,6 +568,7 @@ export class SettingsService {
 		disabledMarkers?: string[];
 		quickPhrases?: string[];
 		quickPhrasesEnabled?: boolean;
+		minimalNewChat?: boolean;
 	}): Promise<void> {
 		const needsReload =
 			partial.promptMode !== undefined ||
@@ -725,6 +729,9 @@ export class SettingsService {
 		if (partial.retainFinishedConversations !== undefined) {
 			this.settings.retainFinishedConversations = Boolean(partial.retainFinishedConversations);
 		}
+		if (partial.openRecentSessionOnProjectSwitch !== undefined) {
+			this.settings.openRecentSessionOnProjectSwitch = Boolean(partial.openRecentSessionOnProjectSwitch);
+		}
 		let sessionsFilterChanged = false;
 		if (partial.showForkedParentSessions !== undefined) {
 			const nextVal = Boolean(partial.showForkedParentSessions);
@@ -801,6 +808,9 @@ export class SettingsService {
 		}
 		if (partial.quickPhrasesEnabled !== undefined) {
 			this.settings.quickPhrasesEnabled = partial.quickPhrasesEnabled;
+		}
+		if (partial.minimalNewChat !== undefined) {
+			this.settings.minimalNewChat = partial.minimalNewChat;
 		}
 		// 统一工具开关 live 生效（ActiveSet 加减；失败静默，下次创建/reload 重放）。
 		// 必须在 this.push() 前生效，保证 promptSnapshot 收集到的是最新的活跃工具集与完整提示词！

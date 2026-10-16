@@ -1,6 +1,6 @@
 {
 	"name": "pi-web-ui",
-	"version": "0.105.1",
+	"version": "0.106.0",
 	"description": "Just open your browser to get all your work done — browser cockpit for AI coding agents (chat, code, files, terminal, Git in one tab)",
 	"license": "MIT",
 	"author": {
@@ -13,7 +13,8 @@
 		"registry": "https://registry.npmjs.org/"
 	},
 	"bin": {
-		"pi-web-ui": "bin/pi-web-ui.mjs"
+		"pi-web-ui": "bin/pi-web-ui.mjs",
+		"piwebui": "bin/pi-web-ui.mjs"
 	},
 	"main": "bin/pi-web-ui.mjs",
 	"files": [

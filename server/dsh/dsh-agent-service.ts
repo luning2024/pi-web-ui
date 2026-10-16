@@ -57,6 +57,7 @@ import { TerminalManager, loadCommands, saveCommandsFile } from "../terminals.js
 import { saveUpload } from "../uploads.js";
 import type { PluginCommandDef } from "../plugins.js";
 import { checkAll as checkAllUpdates, collectTargets, resolveNpmRegistry } from "../update-check.js";
+import { collectInstalledEngineTargets } from "../engine-probe.js";
 import { previewKind } from "../text-sniff.js";
 import { removeQueuedByIndexOrText } from "../queue-utils.js";
 import type {
@@ -255,6 +256,7 @@ interface DshSettings {
 	keepRecentMessages: number;
 	showForkedParentSessions: boolean;
 	retainFinishedConversations: boolean;
+	openRecentSessionOnProjectSwitch: boolean;
 	disabledPlugins: string[];
 	/** 宿主 UI 布局偏好（插件 UI 贡献 + 内置条目；纯 UI，per-client；issue #146）。 */
 	uiLayout: UiLayoutPrefs;
@@ -267,6 +269,7 @@ interface DshSettings {
 	/** 输入框上方的快捷短语（点击即发送；纯 UI 偏好）。 */
 	quickPhrases: string[];
 	quickPhrasesEnabled: boolean;
+	minimalNewChat: boolean;
 	/** 组合模板与来源覆盖（保持与 pi 引擎 ClientSettings 一致）。 */
 	promptTemplate?: string;
 	promptOverrides?: Record<string, string>;
@@ -320,6 +323,7 @@ const DEFAULT_SETTINGS: DshSettings = {
 	keepRecentMessages: DEFAULT_KEEP_RECENT_MESSAGES,
 	showForkedParentSessions: false,
 	retainFinishedConversations: false,
+	openRecentSessionOnProjectSwitch: true,
 	disabledPlugins: [],
 	uiLayout: {},
 	reviewPrompt: "",
@@ -327,6 +331,7 @@ const DEFAULT_SETTINGS: DshSettings = {
 	defaultPermissionPreset: PERMISSION_DEFAULT_PRESET,
 	quickPhrases: [],
 	quickPhrasesEnabled: true,
+	minimalNewChat: false,
 	promptTemplate: "",
 	promptOverrides: {},
 };
@@ -542,11 +547,13 @@ export class DshClientSession {
 				keepRecentMessages: normalizeKeepRecentMessages(savedSettings.keepRecentMessages),
 				showForkedParentSessions: savedSettings.showForkedParentSessions ?? false,
 				retainFinishedConversations: savedSettings.retainFinishedConversations ?? false,
+				openRecentSessionOnProjectSwitch: savedSettings.openRecentSessionOnProjectSwitch ?? true,
 				disabledPlugins: savedSettings.disabledPlugins ?? [],
 				uiLayout: normalizeUiLayout(savedSettings.uiLayout),
 				reviewPrompt: savedSettings.reviewPrompt,
 				quickPhrases: savedSettings.quickPhrases ?? [],
 				quickPhrasesEnabled: savedSettings.quickPhrasesEnabled ?? true,
+				minimalNewChat: savedSettings.minimalNewChat ?? false,
 				promptTemplate: savedSettings.promptTemplate ?? "",
 				promptOverrides: savedSettings.promptOverrides ?? {},
 				defaultAgentPreset: savedSettings.defaultAgentPreset ?? PRESET_DEFAULT_ID,
@@ -871,6 +878,7 @@ export class DshClientSession {
 						...(this.activeId ? { conversationId: this.activeId } : {}),
 						...(conversationTitle ? { conversationTitle } : {}),
 					});
+					this.flushSnapshot();
 				} else if (method === "tools.call.request") {
 					// 工具桥（#15）：模型调了插件工具 → 服务端跑插件实现 → tools/call-result 回传。
 					void this.handleToolCallRequest(params as { id: string; name: string; args?: Record<string, unknown> });
@@ -901,6 +909,7 @@ export class DshClientSession {
 		// 无论成功失败都清掉待答快照：同 id 不会再有下一次，留着会让重连的客户端
 		// 恢复到一张已经没人在等的问卷。
 		if (this.pendingQuestion?.id === id) this.pendingQuestion = null;
+		this.flushSnapshot();
 		try {
 			await this.runtime.answerQuestion(id, answers, cancelled);
 		} catch (err) {
@@ -3453,15 +3462,22 @@ export class DshClientSession {
 					const sessionId = basename(dirname(file));
 					// 审查会话不进搜索。
 					if (sessionId.startsWith("review-")) continue;
-					if (
-						all.includes(q) ||
-						sessionId.toLowerCase().includes(q) ||
-						firstUserText(events, this.getLang()).toLowerCase().includes(q)
-					) {
+					const firstMsg = firstUserText(events, this.getLang());
+					if (all.includes(q) || sessionId.toLowerCase().includes(q) || firstMsg.toLowerCase().includes(q)) {
+						const storedTitle =
+							this.stateStore?.getSessionTitle(this.cwd, file) ?? this.stateStore?.getSessionTitle(this.cwd, sessionId);
+						const explicitTitle =
+							storedTitle ??
+							sessionLogTitle(events) ??
+							[...this.convs.values()].find(
+								(c) => c.sessionId === sessionId && !DshClientSession.isDefaultTitle(c.title),
+							)?.title;
+						const displayName = this.resolveSessionDisplayName(sessionId, explicitTitle, firstMsg);
 						results.push({
 							path: file,
-							name: sessionId,
-							firstMessage: firstUserText(events, this.getLang()),
+							name: explicitTitle ?? sessionId,
+							displayName,
+							firstMessage: firstMsg,
 							messageCount: events.filter(
 								(e) =>
 									(e.type === "user/message" && !isDshInternalUserMessage(e.data as Record<string, unknown>)) ||
@@ -3907,6 +3923,7 @@ export class DshClientSession {
 			keepRecentMessages: normalizeKeepRecentMessages(this.settings.keepRecentMessages),
 			showForkedParentSessions: this.settings.showForkedParentSessions ?? false,
 			retainFinishedConversations: this.settings.retainFinishedConversations ?? false,
+			openRecentSessionOnProjectSwitch: this.settings.openRecentSessionOnProjectSwitch ?? true,
 			// DSH 无 skill 全文注入概念，给空保协议完整。
 			skillsFullText: [],
 			visionBridgeEnabled: false,
@@ -3948,6 +3965,7 @@ export class DshClientSession {
 			subagentModels: [],
 			quickPhrases: [...this.settings.quickPhrases],
 			quickPhrasesEnabled: this.settings.quickPhrasesEnabled,
+			minimalNewChat: this.settings.minimalNewChat,
 			quickPhrasesSeeded: this.stateStore.getQuickPhrasesSeeded(),
 		};
 		this.emit({ type: "settings_state", settings });
@@ -3980,6 +3998,7 @@ export class DshClientSession {
 		keepRecentMessages?: number;
 		showForkedParentSessions?: boolean;
 		retainFinishedConversations?: boolean;
+		openRecentSessionOnProjectSwitch?: boolean;
 		visionBridgeEnabled?: boolean;
 		visionBridgeModel?: string | null;
 		visionBridgePromptMode?: "append" | "replace";
@@ -3990,6 +4009,7 @@ export class DshClientSession {
 		disabledMarkers?: string[];
 		quickPhrases?: string[];
 		quickPhrasesEnabled?: boolean;
+		minimalNewChat?: boolean;
 		quickPhrasesSeeded?: boolean;
 	}): Promise<void> {
 		if (partial.quickPhrasesSeeded) this.stateStore.markQuickPhrasesSeeded();
@@ -4023,6 +4043,8 @@ export class DshClientSession {
 			this.settings.showForkedParentSessions = Boolean(partial.showForkedParentSessions);
 		if (partial.retainFinishedConversations !== undefined)
 			this.settings.retainFinishedConversations = Boolean(partial.retainFinishedConversations);
+		if (partial.openRecentSessionOnProjectSwitch !== undefined)
+			this.settings.openRecentSessionOnProjectSwitch = Boolean(partial.openRecentSessionOnProjectSwitch);
 		if (partial.disabledPlugins !== undefined) this.settings.disabledPlugins = partial.disabledPlugins;
 		if (partial.uiLayout !== undefined) this.settings.uiLayout = normalizeUiLayout(partial.uiLayout);
 		if (partial.reviewPrompt !== undefined) this.settings.reviewPrompt = partial.reviewPrompt;
@@ -4034,6 +4056,7 @@ export class DshClientSession {
 				.slice(0, 30);
 		}
 		if (partial.quickPhrasesEnabled !== undefined) this.settings.quickPhrasesEnabled = partial.quickPhrasesEnabled;
+		if (partial.minimalNewChat !== undefined) this.settings.minimalNewChat = partial.minimalNewChat;
 		const prevMarkerGuidance = this.markerSvc.buildGuidance();
 		this.markerSvc.setAll({
 			markersEnabled: partial.markersEnabled,
@@ -4066,11 +4089,13 @@ export class DshClientSession {
 			keepRecentMessages: normalizeKeepRecentMessages(this.settings.keepRecentMessages),
 			showForkedParentSessions: this.settings.showForkedParentSessions ?? false,
 			retainFinishedConversations: this.settings.retainFinishedConversations ?? false,
+			openRecentSessionOnProjectSwitch: this.settings.openRecentSessionOnProjectSwitch ?? true,
 			disabledPlugins: this.settings.disabledPlugins,
 			uiLayout: normalizeUiLayout(this.settings.uiLayout),
 			reviewPrompt: this.settings.reviewPrompt,
 			quickPhrases: this.settings.quickPhrases,
 			quickPhrasesEnabled: this.settings.quickPhrasesEnabled,
+			minimalNewChat: this.settings.minimalNewChat,
 			defaultAgentPreset: this.settings.defaultAgentPreset,
 			promptTemplate: this.settings.promptTemplate ?? "",
 			promptOverrides: this.settings.promptOverrides ?? {},
@@ -4470,6 +4495,7 @@ export class DshClientSession {
 			keepRecentMessages: normalizeKeepRecentMessages(this.settings.keepRecentMessages),
 			showForkedParentSessions: this.settings.showForkedParentSessions ?? false,
 			retainFinishedConversations: this.settings.retainFinishedConversations ?? false,
+			openRecentSessionOnProjectSwitch: this.settings.openRecentSessionOnProjectSwitch ?? true,
 			disabledPlugins: this.settings.disabledPlugins,
 			uiLayout: normalizeUiLayout(this.settings.uiLayout),
 			reviewPrompt: this.settings.reviewPrompt,
@@ -5205,6 +5231,7 @@ export class DshClientSession {
 		try {
 			const targets = collectTargets(join(homedir(), ".pi", "agent"), DshClientSession.currentAppVersion(), undefined, {
 				projectCwd: this.cwd,
+				extraTargets: collectInstalledEngineTargets(),
 			});
 			const items = await checkAllUpdates(
 				targets,
@@ -5570,9 +5597,10 @@ export class DshClientSession {
 			const prev = this.conv;
 			prev.listed = this.shouldRetainDshConversation(prev) || prev.messages.length > 0;
 			// 新项目 → 恢复最近历史会话（若有）或新建空白会话
-			const recentFiles = findSessionFilesForCwd(this.sessionRoot, abs).filter(
-				(f) => !basename(dirname(f)).startsWith("review-"),
-			);
+			const openRecent = this.settings.openRecentSessionOnProjectSwitch ?? true;
+			const recentFiles = openRecent
+				? findSessionFilesForCwd(this.sessionRoot, abs).filter((f) => !basename(dirname(f)).startsWith("review-"))
+				: [];
 			let resumedConv: DshConversation | null = null;
 			for (const file of recentFiles) {
 				try {

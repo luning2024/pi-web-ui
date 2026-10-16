@@ -643,6 +643,7 @@ export function handleSettingsMessage(msg: ClientMessage, cs: DispatchSession): 
 				keepRecentMessages: (msg as { keepRecentMessages?: number }).keepRecentMessages,
 				showForkedParentSessions: (msg as { showForkedParentSessions?: boolean }).showForkedParentSessions,
 				retainFinishedConversations: msg.retainFinishedConversations,
+				openRecentSessionOnProjectSwitch: msg.openRecentSessionOnProjectSwitch,
 				devNoCache: (msg as { devNoCache?: boolean }).devNoCache,
 				autoReload: (msg as { autoReload?: boolean }).autoReload,
 				skillsFullText: (msg as { skillsFullText?: string[] }).skillsFullText,
@@ -660,6 +661,7 @@ export function handleSettingsMessage(msg: ClientMessage, cs: DispatchSession): 
 				disabledMarkers: (msg as { disabledMarkers?: string[] }).disabledMarkers,
 				quickPhrases: (msg as { quickPhrases?: string[] }).quickPhrases,
 				quickPhrasesEnabled: (msg as { quickPhrasesEnabled?: boolean }).quickPhrasesEnabled,
+				minimalNewChat: (msg as { minimalNewChat?: boolean }).minimalNewChat,
 				quickPhrasesSeeded: (msg as { quickPhrasesSeeded?: boolean }).quickPhrasesSeeded,
 				uiLayout: (msg as { uiLayout?: unknown }).uiLayout,
 			});

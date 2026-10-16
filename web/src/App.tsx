@@ -101,8 +101,8 @@ import {
 	FiAlertTriangle,
 	FiBookmark,
 	FiCheck,
-	FiChevronsLeft,
-	FiChevronsRight,
+	FiChevronLeft,
+	FiChevronRight,
 	FiInfo,
 	FiTrash2,
 	FiUpload,
@@ -266,13 +266,13 @@ function ResizeHandle({ side, width, onResize }: { side: PanelSide; width: numbe
 	);
 }
 
-/** 面板折叠后留在原位置的展开条：贴在主区边缘，点击恢复面板。
+/** 面板折叠后悬浮在边缘的展开按钮：贴在主区边缘，点击恢复面板。
  *  只在桌面端出现（移动端抽屉由顶栏按钮控制）。 */
 function PanelRail({ side, onClick }: { side: PanelSide; onClick: () => void }) {
 	const t = useT();
 	return (
 		<button type="button" className={`panel-rail panel-rail-${side}`} title={t("expandPanel")} onClick={onClick}>
-			{side === "left" ? <FiChevronsRight /> : <FiChevronsLeft />}
+			{side === "left" ? <FiChevronRight /> : <FiChevronLeft />}
 		</button>
 	);
 }
@@ -622,7 +622,7 @@ export function App() {
 						})),
 						...c.sessions.map((s) => ({
 							id: s.path,
-							title: s.name || s.firstMessage || s.path,
+							title: s.displayName || s.name || s.firstMessage?.trim() || s.path,
 							cwd,
 							kind: "history" as const,
 						})),
@@ -863,6 +863,8 @@ export function App() {
 	// Wide chat column (client-local, default off).
 	const wide = useWideChat();
 	const hideModelRow = useHideModelRow();
+	const isMinimalEmpty =
+		!!chat.settings?.minimalNewChat && (chat.state?.messages?.length ?? 0) === 0 && !chat.state?.streamingMessage;
 	// Background-task panel (AI-started servers — stop individually or all).
 	const [bgTasksOpen, setBgTasksOpen] = useState(false);
 	// Global search panel (sessions / projects / workspace files).
@@ -1205,6 +1207,7 @@ export function App() {
 				send({ type: "extensions_reload" });
 				send({ type: "plugins_reload" });
 				send({ type: "check_updates_all", force: true });
+				send({ type: "check_engines", force: true });
 			}
 		}
 	}, [chat.terminals, send]);
@@ -1828,6 +1831,7 @@ export function App() {
 				onOpenBgTasks={() => setBgTasksOpen(true)}
 				onOpenGlobalSearch={() => setGlobalSearchOpen(true)}
 				onOpenIconEdit={() => setIconEditOpen(true)}
+				onOpenSandboxModal={() => setSandboxModalMode("create")}
 				sound={sound}
 				onSoundChange={setSound}
 				onSoundPreview={(kind: SoundKind) => playSound(kind, sound)}
@@ -1951,6 +1955,16 @@ export function App() {
 						items={uiSidebarLeft}
 						chat={chat}
 						view={view}
+						plugins={enabledPlugins}
+						dropdownProps={{
+							sound,
+							onSoundChange: setSound,
+							onSoundPreview: (kind: SoundKind) => playSound(kind, sound),
+							theme,
+							themes,
+							onThemeChange: switchTheme,
+							reloadThemes,
+						}}
 						onViewChange={(v: ViewName) => {
 							terminalOpenRequested.current = v === "terminal" && chat.terminals.length === 0;
 							if (terminalOpenRequested.current && createShell()) {
@@ -2013,11 +2027,11 @@ export function App() {
 								onOpenSandboxModal={() => setSandboxModalMode("create")}
 							/>
 						</div>
-						{!isMobile && <ResizeHandle side="left" width={leftWidth} onResize={resizeLeft} />}
+						{!isMobile && !leftCollapsed && <ResizeHandle side="left" width={leftWidth} onResize={resizeLeft} />}
 						<main
 							className={`${wide ? "main wide-chat" : "main"}${hideModelRow ? " hide-model-row" : ""}${
 								chat.transition && !chat.transition.previewMessages?.length ? " main-transitioning" : ""
-							}`}
+							}${isMinimalEmpty ? " main-minimal-empty" : ""}`}
 						>
 							{chat.transition && (
 								<div
@@ -2185,6 +2199,7 @@ export function App() {
 										toolsWrap={chat.settings?.toolsWrap ?? true}
 										toolImages={chat.settings?.toolImagesEnabled ?? true}
 										keepRecent={chat.settings?.keepRecentMessages}
+										minimalNewChat={chat.settings?.minimalNewChat ?? false}
 										jumpTarget={searchJump}
 										onJumpDone={() => setSearchJump(null)}
 										urlJumpMessageId={urlJump && urlJump.sessionId === chat.state.sessionId ? urlJump.messageId : null}
@@ -2445,7 +2460,14 @@ export function App() {
 								onManageModels={openManageModels}
 								onSent={clearAttachments}
 								quickPhrases={chat.settings?.quickPhrases ?? []}
-								quickPhrasesEnabled={zenMode ? false : (chat.settings?.quickPhrasesEnabled ?? true)}
+								quickPhrasesEnabled={
+									zenMode
+										? false
+										: (chat.settings?.quickPhrasesEnabled ?? true) &&
+											(!chat.settings?.minimalNewChat ||
+												(chat.state?.messages?.length ?? 0) > 0 ||
+												!!chat.state?.streamingMessage)
+								}
 								recallDrafts={recallDrafts}
 								dshPermCurrent={chat.state?.permission ?? null}
 								dshPermOptions={chat.dshPermission?.options ?? undefined}
@@ -2459,7 +2481,7 @@ export function App() {
 								sessionId={chat.state?.sessionId ?? ""}
 							/>
 						</main>
-						{!isMobile && <ResizeHandle side="right" width={rightWidth} onResize={resizeRight} />}
+						{!isMobile && !rightCollapsed && <ResizeHandle side="right" width={rightWidth} onResize={resizeRight} />}
 						<div
 							className={`panel-drawer drawer-right ${drawer === "right" ? "open" : ""}${
 								isMobile ? "" : rightCollapsed ? " hidden" : ""
@@ -2534,6 +2556,16 @@ export function App() {
 						items={uiSidebarRight}
 						chat={chat}
 						view={view}
+						plugins={enabledPlugins}
+						dropdownProps={{
+							sound,
+							onSoundChange: setSound,
+							onSoundPreview: (kind: SoundKind) => playSound(kind, sound),
+							theme,
+							themes,
+							onThemeChange: switchTheme,
+							reloadThemes,
+						}}
 						onViewChange={(v: ViewName) => {
 							terminalOpenRequested.current = v === "terminal" && chat.terminals.length === 0;
 							if (terminalOpenRequested.current && createShell()) {

@@ -83,9 +83,11 @@ export const PRESET_FIELD_GROUPS = {
 		"keepRecentMessages",
 		"showForkedParentSessions",
 		"retainFinishedConversations",
+		"openRecentSessionOnProjectSwitch",
 		"bgAutoCleanupMin",
 		"quickPhrases",
 		"quickPhrasesEnabled",
+		"minimalNewChat",
 		"devNoCache",
 		"autoReload",
 	],
@@ -428,6 +430,13 @@ export const PRESET_FIELD_META = {
 		hintZh: "切换对话或新建对话时，已结束（空闲）的对话依然保留在运行列表中，直到手动移出",
 		hintEn: "Keep finished (idle) conversations in the Running Chats list when switching away until manually removed",
 	},
+	openRecentSessionOnProjectSwitch: {
+		labelZh: "切换项目时打开最近会话",
+		labelEn: "Open Recent Session on Project Switch",
+		hintZh: "切换到新项目时自动打开该项目最近的会话；关闭后切换项目将直接创建全新空白对话",
+		hintEn:
+			"Automatically resume the most recent session when switching projects. When off, always create a fresh blank chat",
+	},
 	quickPhrases: {
 		labelZh: "快捷短语列表",
 		labelEn: "Quick Phrases List",
@@ -439,6 +448,12 @@ export const PRESET_FIELD_META = {
 		labelEn: "Enable Quick Phrases",
 		hintZh: "是否在输入框上方显示快捷短语药丸栏",
 		hintEn: "Display quick phrases bar above composer",
+	},
+	minimalNewChat: {
+		labelZh: "极简新对话",
+		labelEn: "Minimalist New Chat",
+		hintZh: "新对话隐藏提示词模板并隐藏快捷短语，呈现现代极简风格",
+		hintEn: "Hide prompt templates and quick phrases on new chat for a clean modern look",
 	},
 	devNoCache: {
 		labelZh: "开发者免缓存模式",

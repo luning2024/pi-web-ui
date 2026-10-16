@@ -1392,6 +1392,7 @@ export class UniversalSession implements DispatchSession {
 						path: conv.id,
 						sessionId: conv.id,
 						name: conv.title,
+						displayName: this.resolveSessionDisplayName(conv, firstMsg),
 						firstMessage: firstMsg,
 						messageCount: conv.messages.length,
 						modified: conv.updatedAt,
@@ -2074,6 +2075,7 @@ export class UniversalSession implements DispatchSession {
 			keepRecentMessages: s?.keepRecentMessages ?? 0,
 			showForkedParentSessions: false,
 			retainFinishedConversations: false,
+			openRecentSessionOnProjectSwitch: true,
 			skillsFullText: [],
 			visionBridgeEnabled: false,
 			visionBridgeModel: null,
@@ -2114,6 +2116,7 @@ export class UniversalSession implements DispatchSession {
 			subagentModels: [],
 			quickPhrases: s?.quickPhrases ?? [],
 			quickPhrasesEnabled: s?.quickPhrasesEnabled ?? true,
+			minimalNewChat: s?.minimalNewChat ?? false,
 			quickPhrasesSeeded: this.stateStore?.getQuickPhrasesSeeded() ?? true,
 		};
 		this.send({ type: "settings_state", settings });
