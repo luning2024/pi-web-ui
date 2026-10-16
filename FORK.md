@@ -2,8 +2,17 @@
 
 `pi-web-ui` 的 fork，用来产出**我们自己品牌的桌面版**（`pi-desktop` / 「pi 桌面版」）并承载 SFW 开发面板插件。
 
-- `origin` = 我们的 fork：https://github.com/luning2024/pi-web-ui
-- `upstream` = 上游：https://github.com/xing-shuyin/pi-web-ui（MIT）
+三个 remote：
+
+| remote | 地址 | 角色 |
+|---|---|---|
+| `origin` | `git@gitlab.funplus.io:ning.lu2/sfw-go.git` | 本仓库的正式家（公司 GitLab），默认推送目标 |
+| `github` | `git@github.com:luning2024/pi-web-ui.git` | GitHub 上的 pi-web-ui fork：**跟上游打交道只走这条路** |
+| `upstream` | `https://github.com/xing-shuyin/pi-web-ui.git` | 原始上游（MIT） |
+
+GitHub 的 fork 关系是 GitHub 侧的概念，与本地 remote 怎么命名无关 —— 代码搬到 GitLab 后，`luning2024/pi-web-ui` 依然是 pi-web-ui 的 fork，sync fork / 提 PR 照旧。GitLab 上的 `sfw-go` 只是普通仓库，它不认识 pi-web-ui，所以**同步上游的活儿永远在 `github` / `upstream` 上做**，推代码则推 `origin`。
+
+> GitLab 的 `main` 是 protected branch（禁 force push）。接管空仓库时用的是 `git merge -s ours --allow-unrelated-histories origin/main`，再普通 push。
 - 本 fork 相对上游的改动**全是提交**，`git diff upstream/main` 一眼看全
 
 ## 改了什么
@@ -29,11 +38,17 @@ npm ci
 npm run desktop:dist        # → release/pi-desktop-<版本>-setup.exe，约 140 MB
 ```
 
-**不要删 `app-update.yml`。** electron-builder 会从 `origin` 推断出仓库写进它 —— 在本 fork 里那指向**我们自己**（`owner: luning2024 / repo: pi-web-ui`），这正是想要的：自动更新只认我们自己的 release，不会把应用升回官方版。
+**`app-update.yml` 是从 `origin` 推断出来的，而 origin 现在是自建 GitLab。** electron-builder 用 `hosted-git-info` 解析 `origin` 的 URL，它**不认自建 GitLab**（实测 `git@gitlab.funplus.io:ning.lu2/sfw-go.git` → `null`）；拿不到仓库信息就不写这个文件 —— 即 **GitLab 时代打出的包里没有 `app-update.yml`，自动更新彻底停用**（比过去更干净，连「检查失败」的日志都不会有）。
 
-只要 fork 上还没有 release，启动日志就会有一行「开机更新检查失败（不影响使用）」（`No published versions on GitHub`）—— 预期状态。想在 fork 上发版，照上游的 `.github/workflows/desktop-release.yml` 打 tag 即可。
+打包后一眼验证：
 
-> 反过来：从一份 `origin` 指向**上游**的检出打包（临时克隆那种），`app-update.yml` 会指向 `xing-shuyin/pi-web-ui` —— 那种情况下**必须删掉它**，否则应用会被原地升回官方版、品牌被覆盖。
+```bash
+Test-Path release\win-unpacked\resources\app-update.yml   # 期望 False
+```
+
+> 历史：origin 还指着 GitHub 那会儿，推断结果是 `owner: luning2024 / repo: pi-web-ui`，包里带 `app-update.yml`，启动日志会出现一行「开机更新检查失败（不影响使用）」（`No published versions on GitHub`）。
+>
+> 无论哪条路，**唯一要守住的是 `app-update.yml` 绝不能指向 `xing-shuyin/pi-web-ui`** —— 那会让应用被原地升回官方版、品牌被覆盖。从 `origin` 指向上游的临时克隆打包时，必须删掉它。
 
 ## 跟上游
 
