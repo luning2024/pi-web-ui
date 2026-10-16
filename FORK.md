@@ -35,6 +35,7 @@ GitHub 的 fork 关系是 GitHub 侧的概念，与本地 remote 怎么命名无
 | `plugins/sfw-dev/` | SFW 开发面板 + `sfw_use` 工具（新增） |
 | `scripts/sfw-go/` | 契约检查、插件安装、图标生成（新增） |
 | `docs/sfw-go/` | 本 fork 的设计文档（新增） |
+| `.agents/skills/pi-web-ui-fork-sync/` | 上游同步 skill（新增）：说「同步上游」即触发 |
 
 **server 代码一行没动。**
 
