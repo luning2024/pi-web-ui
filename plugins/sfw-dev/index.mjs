@@ -115,7 +115,8 @@ function findTestAssemblies(baseAbs) {
 		for (const entry of entries) {
 			const abs = join(current.dir, entry.name);
 			if (entry.isDirectory()) {
-				if (current.depth > 0 && entry.name !== "Library" && entry.name !== "obj") stack.push({ dir: abs, depth: current.depth - 1 });
+				if (current.depth > 0 && entry.name !== "Library" && entry.name !== "obj")
+					stack.push({ dir: abs, depth: current.depth - 1 });
 			} else if (entry.name.endsWith(".asmdef") && abs.includes("Tests")) {
 				found.push(abs);
 			}
@@ -206,7 +207,11 @@ async function detectWorkspace(host) {
 	const platform = PLATFORM_DIRS.find((name) => existsSync(join(root, "main", "Project", name))) ?? null;
 	const platformAbs = platform ? join(root, "main", "Project", platform) : join(root, "main", "Project");
 	const platformRel = platform ? "main/Project/" + platform : "main/Project";
-	const editor = resolveEditor(host, platformAbs, projectVersion(readFile(join(platformAbs, "ProjectSettings", "ProjectVersion.txt"))));
+	const editor = resolveEditor(
+		host,
+		platformAbs,
+		projectVersion(readFile(join(platformAbs, "ProjectSettings", "ProjectVersion.txt"))),
+	);
 
 	// .workspaces.json：四仓实时分支与哪个 profile 吻合
 	const declared = readFile(join(root, WORKSPACE_FILE));
@@ -258,7 +263,11 @@ function capabilityRemedy(ws, needed) {
 		tests:
 			"需要团结引擎编辑器与已导入的工程。" +
 			(ws.editor.path === null
-				? " 未找到编辑器（期望 " + String(ws.editor.version ?? "未知") + "，Hub 现有 " + (ws.editor.available.join(", ") || "无") + "）；在插件设置里填「团结引擎路径」，或设 SFW_EDITOR。"
+				? " 未找到编辑器（期望 " +
+					String(ws.editor.version ?? "未知") +
+					"，Hub 现有 " +
+					(ws.editor.available.join(", ") || "无") +
+					"）；在插件设置里填「团结引擎路径」，或设 SFW_EDITOR。"
 				: " 编辑器已找到但 " + String(ws.platform) + "/Library 缺失，先在编辑器里打开该平台工程导入一次。"),
 		checks: "工作区根缺少 scripts/。",
 		memory: "缺少 " + HOST_MEMORY + "。",
@@ -335,7 +344,12 @@ async function opOpen(host) {
 		workspaceMismatch: ws.mismatch,
 		repos: ws.repos,
 		platform: ws.platform,
-		editor: { path: ws.editor.path, version: ws.editor.version, source: ws.editor.source, available: ws.editor.available },
+		editor: {
+			path: ws.editor.path,
+			version: ws.editor.version,
+			source: ws.editor.source,
+			available: ws.editor.available,
+		},
 		editorLocked: ws.editorLocked,
 		capabilities: ws.capabilities,
 	};
@@ -377,10 +391,19 @@ async function opInspect(host, params) {
 	if (target === "bindings") {
 		if (!ws.capabilities.includes("bindings")) return fail("capability-unavailable", capabilityRemedy(ws, "bindings"));
 		const prefab = params.prefab ? String(params.prefab) : null;
-		if (!prefab) return fail("missing-parameter", "inspect(target=bindings) 需要 prefab，例如 Assets/UI/Xxx/Target.prefab");
+		if (!prefab)
+			return fail("missing-parameter", "inspect(target=bindings) 需要 prefab，例如 Assets/UI/Xxx/Target.prefab");
 		const args = [UIFACADE_SCRIPT, "--prefab", prefab, "--check", "--diff"];
 		const r = await run("python", args, ws.root, 120000);
-		return { ok: r.ok, operation: "inspect", target: "bindings", prefab, command: "python " + args.join(" "), stdout: r.stdout.trim(), stderr: r.stderr.trim() };
+		return {
+			ok: r.ok,
+			operation: "inspect",
+			target: "bindings",
+			prefab,
+			command: "python " + args.join(" "),
+			stdout: r.stdout.trim(),
+			stderr: r.stderr.trim(),
+		};
 	}
 
 	if (target === "memory") {
@@ -391,7 +414,15 @@ async function opInspect(host, params) {
 		if (query) args.push("--query", query);
 		args.push("--host", "pi", "--cwd", ws.root);
 		const r = await run(process.execPath, args, ws.root, 30000);
-		return { ok: r.ok, operation: "inspect", target: "memory", scope, query, stdout: r.stdout.trim(), stderr: r.stderr.trim() };
+		return {
+			ok: r.ok,
+			operation: "inspect",
+			target: "memory",
+			scope,
+			query,
+			stdout: r.stdout.trim(),
+			stderr: r.stderr.trim(),
+		};
 	}
 
 	if (target === "docs") {
@@ -403,7 +434,10 @@ async function opInspect(host, params) {
 			operation: "inspect",
 			target: "docs",
 			query,
-			indexHits: index.split(/\r?\n/).filter((l) => l.includes(query)).slice(0, 20),
+			indexHits: index
+				.split(/\r?\n/)
+				.filter((l) => l.includes(query))
+				.slice(0, 20),
 			note: "索引未命中时让 agent 用 grep 搜 docs/ 正文；INDEX.md 是唯一入口。",
 		};
 	}
@@ -428,10 +462,15 @@ async function opAct(host, params, runs, nextRunId) {
 	const action = String(params.action ?? "");
 	const ws = await detectWorkspace(host);
 	const needsEditor = action === "editmode-tests" || action === "compile";
-	if (needsEditor && !ws.capabilities.includes("tests")) return fail("capability-unavailable", capabilityRemedy(ws, "tests"), { capability: "tests" });
+	if (needsEditor && !ws.capabilities.includes("tests"))
+		return fail("capability-unavailable", capabilityRemedy(ws, "tests"), { capability: "tests" });
 
 	if (needsEditor && ws.editorLocked) {
-		return fail("editor-locked", String(ws.platform) + "/Temp/UnityLockfile 存在——编辑器正开着这个工程，batch 会失败。先关闭编辑器。", { platform: ws.platform });
+		return fail(
+			"editor-locked",
+			String(ws.platform) + "/Temp/UnityLockfile 存在——编辑器正开着这个工程，batch 会失败。先关闭编辑器。",
+			{ platform: ws.platform },
+		);
 	}
 
 	const slug = String(params.slug ?? "sfw-dev").replace(/[^\w.-]+/g, "-");
@@ -441,13 +480,23 @@ async function opAct(host, params, runs, nextRunId) {
 		// 静态编译门。成功判据是三条日志同时出现，且无 error CS。
 		// 这里 -quit 是对的：不跑测试，静默跳过的坑不适用。
 		const logRel = "artifacts/" + slug + "-compile.log";
-		const args = ["-batchmode", "-nographics", "-silent-crashes", "-quit", "-projectPath", ws.platformAbs, "-logFile", join(ws.root, logRel)];
+		const args = [
+			"-batchmode",
+			"-nographics",
+			"-silent-crashes",
+			"-quit",
+			"-projectPath",
+			ws.platformAbs,
+			"-logFile",
+			join(ws.root, logRel),
+		];
 		const r = await run(ws.editor.path, args, ws.root, timeoutMs);
 		const log = readFile(join(ws.root, logRel));
 		const errors = log ? compileErrors(log) : [];
 		const buildSuccess = Boolean(log && /Tundra build success/.test(log));
 		const exitedClean = Boolean(log && /Exiting batchmode successfully now!/.test(log));
-		const verdict = errors.length > 0 ? "compile-failed" : !log ? "no-log" : buildSuccess && exitedClean ? "passed" : "inconclusive";
+		const verdict =
+			errors.length > 0 ? "compile-failed" : !log ? "no-log" : buildSuccess && exitedClean ? "passed" : "inconclusive";
 		return {
 			ok: verdict === "passed",
 			operation: "act",
@@ -469,7 +518,15 @@ async function opAct(host, params, runs, nextRunId) {
 		const args = ["-batchmode", "-nographics", "-buildTarget", TEST_BUILD_TARGET, "-projectPath", ws.platformAbs];
 		if (params.assemblyNames) args.push("-assemblyNames", String(params.assemblyNames));
 		if (params.testFilter) args.push("-testFilter", String(params.testFilter));
-		args.push("-runTests", "-testPlatform", "EditMode", "-testResults", join(ws.root, resultsRel), "-logFile", join(ws.root, logRel));
+		args.push(
+			"-runTests",
+			"-testPlatform",
+			"EditMode",
+			"-testResults",
+			join(ws.root, resultsRel),
+			"-logFile",
+			join(ws.root, logRel),
+		);
 		const r = await run(ws.editor.path, args, ws.root, timeoutMs);
 		const runId = nextRunId();
 		runs.set(runId, { resultsRel, logRel, code: r.code, timedOut: r.timedOut });
@@ -496,7 +553,13 @@ async function opAct(host, params, runs, nextRunId) {
 		const results = [];
 		for (const c of checks) {
 			const r = await run(c.command, c.args, ws.root, 120000);
-			results.push({ name: c.name, ok: r.ok, code: r.code, stdout: tail(r.stdout.trim(), 25), stderr: tail(r.stderr.trim(), 15) });
+			results.push({
+				name: c.name,
+				ok: r.ok,
+				code: r.code,
+				stdout: tail(r.stdout.trim(), 25),
+				stderr: tail(r.stderr.trim(), 15),
+			});
 		}
 		return { ok: results.every((x) => x.ok), operation: "act", action, results };
 	}
@@ -505,7 +568,14 @@ async function opAct(host, params, runs, nextRunId) {
 		const apply = params.apply === true;
 		const args = ["scripts/sync-skills.mjs", "sync"].concat(apply ? ["--apply"] : []);
 		const r = await run(process.execPath, args, ws.root, 120000);
-		return { ok: r.ok, operation: "act", action, applied: apply, stdout: tail(r.stdout.trim(), 40), stderr: tail(r.stderr.trim(), 15) };
+		return {
+			ok: r.ok,
+			operation: "act",
+			action,
+			applied: apply,
+			stdout: tail(r.stdout.trim(), 40),
+			stderr: tail(r.stderr.trim(), 15),
+		};
 	}
 
 	return fail("unknown-action", "action 取 compile | editmode-tests | checks | sync-skills 之一", { action });
@@ -513,7 +583,8 @@ async function opAct(host, params, runs, nextRunId) {
 
 async function opCapture(host, params, runs) {
 	const runId = params.runId ? String(params.runId) : null;
-	if (runId && !runs.has(runId)) return fail("unknown-run", "未知 runId；先调用 act，或直接给 resultsPath/logPath。", { runId });
+	if (runId && !runs.has(runId))
+		return fail("unknown-run", "未知 runId；先调用 act，或直接给 resultsPath/logPath。", { runId });
 	const record = runId ? runs.get(runId) : null;
 	const resultsRel = record?.resultsRel ?? (params.resultsPath ? String(params.resultsPath) : null);
 	const logRel = record?.logRel ?? (params.logPath ? String(params.logPath) : null);
@@ -533,7 +604,10 @@ async function opCapture(host, params, runs) {
 			compileErrors: errors,
 			evidence: { resultsPath: resultsRel, logPath: logRel },
 			logTail: log ? tail(log, 30) : null,
-			note: errors.length > 0 ? "测试没跑起来：先修编译错误。" : "没有产出测试结果 XML。常见原因：传了 -quit，或编辑器仍开着导致工程被锁。",
+			note:
+				errors.length > 0
+					? "测试没跑起来：先修编译错误。"
+					: "没有产出测试结果 XML。常见原因：传了 -quit，或编辑器仍开着导致工程被锁。",
 		};
 	}
 
@@ -568,39 +642,64 @@ export default definePlugin({
 			name: "sfw_use",
 			label: "SFW Dev",
 			description:
-				"天天农场(SFW)开发验证工具。open 解析工作区与能力；inspect 只读探查(tests|bindings|memory|docs|config)；" +
-				"act 执行(compile|editmode-tests|checks|sync-skills)；capture 把测试产物判成结论。改了 GameScripts 之后必须走 act+capture。",
-			promptSnippet: "sfw_use: 解析 SFW 工作区、跑团结引擎编译门与 EditMode、判读验证结论",
+				"Sunflower Farm (SFW) development verification tool. open resolves the workspace and its capability list; " +
+				"inspect reads tests|bindings|memory|docs|config; act runs compile|editmode-tests|checks|sync-skills; capture turns test artifacts into a verdict. After changing GameScripts you must go through act + capture.",
+			promptSnippet: "Use when working in the SFW Tuanjie workspace or its GameScripts",
 			promptGuidelines: [
-				"编译通过 ≠ 功能验证：改了 GameScripts 必须 act(editmode-tests) 再 capture 读 verdict。",
-				"改完 .cs 先跑 act(compile) 做静态编译门（约 1 分钟），比整轮 EditMode 便宜得多；它只证明脚本能编译。",
-				"EditMode 用 project_wx + -buildTarget WeixinMiniGame，且不要传 -quit——传了测试可能被静默跳过。",
-				"编辑器开着时 Assets 被锁：act 会拒绝执行，先关闭编辑器。",
-				"测试失败先看 capture 的 firstFailure 与 compileErrors，不要直接读原始 log。",
-				"TDD：先跑一次期望 FAIL 的 EditMode，改完再跑期望 PASS，两次都要 capture。",
-				"改了 claude-config/skills/ 之后跑 act(sync-skills, apply=true)，否则 .agents/skills 漂移。",
-				"配置改动走 PMT：本地只提需求、消费产物、验证客户端行为，不改配置源文件。",
-				"sow-server 是只读参考、无推送权限，不要在它上面建任务。",
-				"生成物红线：Configs/、PBMsgs/、Generate/、GameLogic/Runtime/Managers/Model/MM.cs、**/*.fb.cs 一律不得手改——改上游源再重新生成；任务看起来要编辑生成输出时停下来问。",
+				"A clean compile is not functional verification: after changing GameScripts call act(editmode-tests) then capture for the verdict.",
+				"After editing .cs files run act(compile) as a static gate first (~1 min) — far cheaper than a full EditMode round; it only proves the scripts compile.",
+				"EditMode runs with project_wx + -buildTarget WeixinMiniGame, and never pass -quit: tests may be silently skipped when it is present.",
+				"Assets are locked while the editor is open: act refuses to run, so close the editor first.",
+				"On failure read firstFailure and compileErrors from capture instead of the raw log.",
+				"TDD: run EditMode once expecting FAIL, fix, then run again expecting PASS; capture both runs.",
+				"After changing claude-config/skills/ run act(sync-skills, apply=true), otherwise .agents/skills drifts.",
+				"Config changes go through PMT: locally only raise the request, consume artifacts and verify client behaviour; never edit the config source files.",
+				"sow-server is a read-only reference with no push access; never create tasks on it.",
+				"Generated-output red line: never hand-edit Configs/, PBMsgs/, Generate/, MM.cs or **/*.fb.cs — change the upstream source and regenerate. Stop and ask if a task seems to need it.",
 			],
 			parameters: {
 				type: "object",
 				required: ["operation"],
 				additionalProperties: false,
 				properties: {
-					operation: { type: "string", enum: ["open", "inspect", "act", "capture"], description: "open 解析工作区；inspect 只读；act 执行；capture 判读。" },
-					target: { type: "string", enum: ["tests", "bindings", "memory", "docs", "config"], description: "inspect 的目标。" },
-					action: { type: "string", enum: ["compile", "editmode-tests", "checks", "sync-skills"], description: "act 的动作。" },
-					testFilter: { type: "string", description: "EditMode 测试类/方法全名，如 client.Tests.Foo.Bar，多个用 | 连接。" },
-					assemblyNames: { type: "string", description: "EditMode 测试程序集名，如 AGame.Logic.EditorTests。比 testFilter 粗。" },
-					slug: { type: "string", description: "产物文件名前缀，默认 sfw-dev。" },
-					prefab: { type: "string", description: "inspect(target=bindings) 的 Prefab 路径，相对 Assets。" },
-					query: { type: "string", description: "inspect(target=memory|docs) 的查询词。" },
-					scope: { type: "string", enum: ["sfw", "workbench"], description: "inspect(target=memory) 的记忆 scope，默认 sfw。" },
-					apply: { type: "boolean", description: "act(sync-skills) 是否真正落盘，默认 false 只干跑。" },
-					runId: { type: "string", description: "capture 读取的 runId，由 act 返回。" },
-					resultsPath: { type: "string", description: "capture 直接指定的测试结果 XML（工作区相对路径）。" },
-					logPath: { type: "string", description: "capture 直接指定的日志（工作区相对路径）。" },
+					operation: {
+						type: "string",
+						enum: ["open", "inspect", "act", "capture"],
+						description: "open resolves the workspace; inspect is read-only; act executes; capture reads a verdict.",
+					},
+					target: {
+						type: "string",
+						enum: ["tests", "bindings", "memory", "docs", "config"],
+						description: "inspect target.",
+					},
+					action: {
+						type: "string",
+						enum: ["compile", "editmode-tests", "checks", "sync-skills"],
+						description: "act action.",
+					},
+					testFilter: {
+						type: "string",
+						description: "EditMode test class/method full name, e.g. client.Tests.Foo.Bar; separate several with |.",
+					},
+					assemblyNames: {
+						type: "string",
+						description: "EditMode test assembly name, e.g. AGame.Logic.EditorTests. Coarser than testFilter.",
+					},
+					slug: { type: "string", description: "Artifact filename prefix, default sfw-dev." },
+					prefab: { type: "string", description: "Prefab path relative to Assets, for inspect(target=bindings)." },
+					query: { type: "string", description: "Query string for inspect(target=memory|docs)." },
+					scope: {
+						type: "string",
+						enum: ["sfw", "workbench"],
+						description: "Memory scope for inspect(target=memory), default sfw.",
+					},
+					apply: { type: "boolean", description: "Whether act(sync-skills) really writes; default false = dry run." },
+					runId: { type: "string", description: "runId returned by act; used by capture." },
+					resultsPath: {
+						type: "string",
+						description: "Test result XML path (workspace-relative) given directly to capture.",
+					},
+					logPath: { type: "string", description: "Log path (workspace-relative) given directly to capture." },
 				},
 			},
 			async execute(_id, params) {
@@ -629,14 +728,30 @@ export default definePlugin({
 				switch (msg.action) {
 					case "state": {
 						const ws = await detectWorkspace(host);
-						reply({ kind: "state", state: { root: ws.root, workspace: ws.profile, mismatch: ws.mismatch, repos: ws.repos, platform: ws.platform, editor: ws.editor, editorLocked: ws.editorLocked, capabilities: ws.capabilities } });
+						reply({
+							kind: "state",
+							state: {
+								root: ws.root,
+								workspace: ws.profile,
+								mismatch: ws.mismatch,
+								repos: ws.repos,
+								platform: ws.platform,
+								editor: ws.editor,
+								editorLocked: ws.editorLocked,
+								capabilities: ws.capabilities,
+							},
+						});
 						break;
 					}
 					case "act": {
 						const result = await opAct(host, msg, runs, nextRunId);
 						reply({ kind: "act", result });
-						const label = msg.action === "compile" ? "编译门" : msg.action === "editmode-tests" ? "EditMode" : String(msg.action);
-						host.notify(result.ok ? "info" : "warning", "sfw-dev " + label + "：" + String(result.verdict ?? (result.ok ? "完成" : (result.code ?? "失败"))));
+						const label =
+							msg.action === "compile" ? "编译门" : msg.action === "editmode-tests" ? "EditMode" : String(msg.action);
+						host.notify(
+							result.ok ? "info" : "warning",
+							"sfw-dev " + label + "：" + String(result.verdict ?? (result.ok ? "完成" : (result.code ?? "失败"))),
+						);
 						break;
 					}
 					case "capture": {
