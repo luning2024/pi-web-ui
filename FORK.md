@@ -13,7 +13,14 @@
 GitHub 的 fork 关系是 GitHub 侧的概念，与本地 remote 怎么命名无关 —— 代码搬到 GitLab 后，`luning2024/pi-web-ui` 依然是 pi-web-ui 的 fork，sync fork / 提 PR 照旧。GitLab 上的 `sfw-go` 只是普通仓库，它不认识 pi-web-ui，所以**同步上游的活儿永远在 `github` / `upstream` 上做**，推代码则推 `origin`。
 
 > GitLab 的 `main` 是 protected branch（禁 force push）。接管空仓库时用的是 `git merge -s ours --allow-unrelated-histories origin/main`，再普通 push。
+
 - 本 fork 相对上游的改动**全是提交**，`git diff upstream/main` 一眼看全
+
+**CI：不配。** GitLab 上没有 `.gitlab-ci.yml`（有意如此）—— 单人维护，本地跑就够。GitHub 那 4 个 workflow 只在**推 GitHub 时**触发：
+
+- 日常推 `origin`（GitLab）→ **什么都不会跑**；本地记得走根 `AGENTS.md` 的提交前三连验（`format:check` / `lint` / `typecheck`）
+- `ci.yml` = push / PR 到 `main`；另外三个（`desktop-release` / `extension-release` / `release-notes`）= 推 `v*` tag
+- **别往 GitHub 推 tag**：那会触发 234 次 workflow，并在 fork 上建 78 个 Release
 
 ## 改了什么
 
